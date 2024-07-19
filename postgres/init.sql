@@ -1,0 +1,16 @@
+CREATE DATABASE products;
+CREATE DATABASE users;
+
+\c products
+CREATE TABLE IF NOT EXISTS product (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  price DECIMAL(10, 2) NOT NULL
+);
+
+\c users
+CREATE TABLE IF NOT EXISTS user (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL
+);

@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: forsen123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - spring-db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: eureka-server
+    restart: always
+    depends_on:
+      - product-service
+      - user-service
+    ports:
+      - "8761:8761"
+    networks:
+      - spring-cloud
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    depends_on:
+      - eureka-server
+    ports:
+      - "8080:8080"
+    networks:
+      - spring-cloud
+      - spring-front
+  user-service:
+    build: ./user-service
+    restart: always
+    environment:
+      POSTGRES_CONN: jdbc:postgresql://postgres:5432/users
+      POSTGRES_USER: youruser
+      POSTGRES_PASSWORD: yourpassword
+      default_zone: http://localhost:8761/eureka/
+      host_name: localhost
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - spring-cloud
+      - spring-db
+
+  product-service:
+    build: ./product-service
+    restart: always
+    environment:
+      POSTGRES_CONN: jdbc:postgresql://postgres:5432/products
+      POSTGRES_USER: youruser
+      POSTGRES_PASSWORD: yourpassword
+      default_zone: http://localhost:8761/eureka/
+      host_name: localhost
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - spring-cloud
+
+  product-front:
+    build: ./product-front
+    restart: always
+    networks:
+      - spring-front
+
+  user-front:
+    build: ./user-front
+    restart: always
+    networks:
+      - spring-front
+
+  shell-app-front:
+    build: ./shell-app-front
+    restart: always
+    networks:
+      - spring-front
+
+  nginx-reverse-proxy:
+    build: ./nginx-server
+    restart: always
+    depends_on:
+      - user-front
+      - product-front
+      - shell-app-front
+    ports:
+      - "80:80"
+    networks:
+      - spring-front
+networks:
+  spring-db:
+  spring-cloud:
+  spring-front:
+volumes:
+  pg_data:
