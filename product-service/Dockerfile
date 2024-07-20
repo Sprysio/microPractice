@@ -16,7 +16,7 @@ FROM openjdk:21-jdk-slim
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get install -y curl dumb-init && \
+    apt-get install -y curl dumb-init iputils-ping postgresql-client && \
     groupadd --system javauser && \
     useradd -s /bin/false -g javauser javauser && \
     rm -rf /var/lib/apt/lists/*

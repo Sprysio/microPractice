@@ -11,9 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
-      - ./postgres/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-      - ./postgres/init-products.sql:/docker-entrypoint-initdb.d/init-products.sql
-      - ./postgres/init-users.sql:/docker-entrypoint-initdb.d/init-users.sql
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - spring-db
     healthcheck:
@@ -21,13 +19,24 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: eureka-server
+    restart: always
+    depends_on:
+      - product-service
+      - user-service
+    ports:
+      - "8761:8761"
+    networks:
+      - spring-cloud
   api-gateway:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
     container_name: api-gateway
-    environment:
-      default_zone: http://eureka-server:8761/eureka/
     depends_on:
       - eureka-server
     ports:
@@ -35,16 +44,6 @@ services:
     networks:
       - spring-cloud
       - spring-front
-  eureka-server:
-    build:
-      context: ./eureka-server
-      dockerfile: Dockerfile
-    container_name: eureka-server
-    restart: always
-    ports:
-      - "8761:8761"
-    networks:
-      - spring-cloud
   user-service:
     build: ./user-service
     restart: always
@@ -52,15 +51,13 @@ services:
       POSTGRES_CONN: jdbc:postgresql://postgres:5432/users
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: forsen123
-      default_zone: http://eureka-server:8761/eureka/
-      host_name: user-service
+      default_zone: http://localhost:8761/eureka/
+      host_name: localhost
     ports:
       - "8081:8080"
     depends_on:
       postgres:
         condition: service_healthy
-      eureka-server:
-        condition: service_started
     networks:
       - spring-cloud
       - spring-db
@@ -72,19 +69,45 @@ services:
       POSTGRES_CONN: jdbc:postgresql://postgres:5432/products
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: forsen123
-      default_zone: http://eureka-server:8761/eureka/
-      host_name: product-service
+      default_zone: http://localhost:8761/eureka/
+      host_name: localhost
     ports:
       - "8082:8080"
     depends_on:
       postgres:
         condition: service_healthy
-      eureka-server:
-        condition: service_started
-      
     networks:
       - spring-cloud
-      - spring-db
+
+  product-front:
+    build: ./product-front
+    restart: always
+    networks:
+      - spring-front
+
+  user-front:
+    build: ./user-front
+    restart: always
+    networks:
+      - spring-front
+
+  shell-app-front:
+    build: ./shell-app-front
+    restart: always
+    networks:
+      - spring-front
+
+  nginx-reverse-proxy:
+    build: ./nginx-server
+    restart: always
+    depends_on:
+      - user-front
+      - product-front
+      - shell-app-front
+    ports:
+      - "80:80"
+    networks:
+      - spring-front
 networks:
   spring-db:
   spring-cloud:
