@@ -6,14 +6,14 @@ function App() {
   const [email, setEmail] = useState('');
 
   useEffect(() => {
-    fetch('/api/users')
+    fetch(`/api/users`)
       .then(response => response.json())
       .then(data => setUsers(data));
   }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch('/api/users', {
+    fetch(`/api/users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

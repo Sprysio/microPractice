@@ -4,16 +4,17 @@ function App() {
   const [products, setProducts] = useState([]);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
+  //const server_host = process.env.REACT_APP_SERVER_HOST;
 
   useEffect(() => {
-    fetch('/api/products')
+    fetch(`/api/products`)
       .then(response => response.json())
       .then(data => setProducts(data));
   }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch('/api/products', {
+    fetch(`/api/products`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

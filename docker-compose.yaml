@@ -21,6 +21,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -29,22 +30,25 @@ services:
     environment:
       default_zone: http://eureka-server:8761/eureka/
     depends_on:
-      - eureka-server
-    ports:
-      - "8080:8080"
+      product-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started   
     networks:
       - spring-cloud
       - spring-front
+
   eureka-server:
     build:
       context: ./eureka-server
       dockerfile: Dockerfile
     container_name: eureka-server
     restart: always
-    ports:
-      - "8761:8761"
     networks:
       - spring-cloud
+
   user-service:
     build: ./user-service
     restart: always
@@ -54,8 +58,6 @@ services:
       POSTGRES_PASSWORD: forsen123
       default_zone: http://eureka-server:8761/eureka/
       host_name: user-service
-    ports:
-      - "8081:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,6 +66,11 @@ services:
     networks:
       - spring-cloud
       - spring-db
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f localhost:8080/actuator/health || exit 1"]
+      interval: 1m
+      timeout: 30s
+      retries: 3
 
   product-service:
     build: ./product-service
@@ -74,17 +81,50 @@ services:
       POSTGRES_PASSWORD: forsen123
       default_zone: http://eureka-server:8761/eureka/
       host_name: product-service
-    ports:
-      - "8082:8080"
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
         condition: service_started
-      
     networks:
       - spring-cloud
       - spring-db
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f localhost:8080/actuator/health || exit 1"]
+      interval: 1m
+      timeout: 30s
+      retries: 3
+
+  product-front:
+    build: ./product-front
+    restart: always
+    networks:
+      - spring-front
+
+  user-front:
+    build: ./user-front
+    restart: always
+    networks:
+      - spring-front
+
+  shell-app-front:
+    build: ./shell-app-front
+    restart: always
+    networks:
+      - spring-front
+
+  nginx-reverse-proxy:
+    build: ./nginx-server
+    restart: always
+    depends_on:
+      - user-front
+      - product-front
+      - shell-app-front
+      - api-gateway
+    ports:
+      - "80:80"
+    networks:
+      - spring-front
 networks:
   spring-db:
   spring-cloud:

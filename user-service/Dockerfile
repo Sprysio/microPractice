@@ -27,4 +27,6 @@ RUN chown -R javauser:javauser /app
 
 USER javauser
 
+EXPOSE 8080
+
 CMD ["dumb-init", "java", "-jar", "app.jar"]
